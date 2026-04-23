@@ -1,0 +1,14 @@
+{
+  "name": "ai-presentation-maker",
+  "version": "1.0.0",
+  "description": "Generate animated React/Framer Motion presentations with any AI model",
+  "type": "module",
+  "main": "generate.js",
+  "scripts": {
+    "generate": "node generate.js",
+    "example": "node generate.js --spec examples/mlops-spec.md --provider anthropic --output output/mlops-example --dry-run"
+  },
+  "keywords": ["presentation", "slides", "framer-motion", "react", "ai", "llm"],
+  "license": "MIT",
+  "engines": { "node": ">=18" }
+}

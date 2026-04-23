@@ -1,0 +1,8 @@
+node_modules/
+output/*/node_modules/
+output/*/.vite/
+output/*/dist/
+.env
+.env.local
+*.log
+.DS_Store
