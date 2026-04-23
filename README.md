@@ -200,16 +200,31 @@ node generate.js --spec my-spec.md --provider ollama --model llama3.1:70b --outp
 
 If you access the Anthropic API through a proxy (e.g. a corporate gateway, a cost-tracking service, or a local Claude Code proxy like the one used in enterprise environments), point the tool at it with `ANTHROPIC_BASE_URL` or `--base-url`.
 
-### Via environment variable (recommended)
+### Via .env file (recommended)
 
 ```bash
-export ANTHROPIC_BASE_URL=http://localhost:6655/anthropic
-export ANTHROPIC_API_KEY=any-non-empty-string   # proxy may not check this
+cp .env.example .env
+```
+
+Edit `.env`:
+
+```env
+ANTHROPIC_API_KEY=<your-proxy-session-token>
+ANTHROPIC_BASE_URL=http://localhost:6655/anthropic/
+```
+
+> The API key for a corporate/local proxy is usually **not** a real `sk-ant-...` key — it's a session token issued by the proxy itself (e.g. a UUID). Check your proxy's documentation or run `echo $ANTHROPIC_API_KEY` inside an active Claude Code session to find the correct value.
+
+### Via environment variable
+
+```bash
+export ANTHROPIC_BASE_URL=http://localhost:6655/anthropic/
+export ANTHROPIC_API_KEY=<proxy-session-token>
 
 node generate.js --spec my-spec.md --provider anthropic --output ./MyPresentation
 ```
 
-The tool will print `Base URL : http://localhost:6655/anthropic` on startup so you can confirm it's active.
+The tool prints `Base URL : ...` on startup to confirm the proxy is active.
 
 ### Via CLI flag
 
@@ -217,32 +232,100 @@ The tool will print `Base URL : http://localhost:6655/anthropic` on startup so y
 node generate.js \
   --spec my-spec.md \
   --provider anthropic \
-  --base-url http://localhost:6655/anthropic \
+  --base-url http://localhost:6655/anthropic/ \
   --output ./MyPresentation
 ```
 
 ### How it works
 
-The tool appends `/v1/messages` to whatever base URL you supply, then sends a standard Anthropic API request body. The proxy is expected to forward the request (with or without modifying headers/keys) and return an unmodified Anthropic response envelope.
+The tool appends `/v1/messages` to whatever base URL you supply, then sends a standard Anthropic API request. The proxy forwards it and returns an unmodified Anthropic response envelope.
 
 ```
-your machine
-  └─ generate.js
-       └─ POST http://localhost:6655/anthropic/v1/messages
-            └─ proxy forwards → https://api.anthropic.com/v1/messages
+generate.js  →  POST http://localhost:6655/anthropic/v1/messages
+                     └─ proxy forwards → https://api.anthropic.com/v1/messages
 ```
 
-### Claude Code proxy (same session proxy)
+### Model restrictions on corporate proxies
 
-If you're running inside a Claude Code session, the proxy is already configured:
+Corporate proxies typically allowlist a fixed set of model aliases and reject versioned IDs. If you get `INVALID_MODEL`, use an alias instead of a specific version:
+
+| Instead of | Use |
+|-----------|-----|
+| `claude-opus-4-7` | `claude-opus-latest` |
+| `claude-sonnet-4-6` | `claude-sonnet-latest` |
+| `claude-haiku-4-5` | `claude-haiku-latest` |
+
+```bash
+node generate.js --spec my-spec.md --provider anthropic --model claude-sonnet-latest --output ./MyPresentation
+```
+
+The default model is already `claude-sonnet-latest` for this reason.
+
+### Claude Code proxy (same-session proxy)
+
+If you're running inside a Claude Code session, the proxy is already wired up. Check the active values:
 
 ```bash
 echo $ANTHROPIC_BASE_URL   # e.g. http://localhost:6655/anthropic/
+echo $ANTHROPIC_API_KEY    # UUID session token, not an sk-ant- key
 ```
 
-Just run the tool as-is — it inherits the environment variable automatically. No `--base-url` flag needed.
+Copy both into your `.env` and the tool will route through the same proxy as Claude Code. Note: the session token changes each time Claude Code restarts — update `.env` when that happens.
 
-> **Note:** `--base-url` only applies to the `anthropic` provider. For `openai`, `groq`, and `mistral`, use their respective `OPENAI_BASE_URL` / `GROQ_BASE_URL` environment variables if your proxy exposes an OpenAI-compatible endpoint.
+> **Note:** `--base-url` only applies to the `anthropic` provider. For `openai`, `groq`, and `mistral` proxies, set `OPENAI_BASE_URL` in `.env` — those providers use the standard OpenAI-compatible base URL convention.
+
+---
+
+## Choosing a Model
+
+Override the default model with `--model` for any provider:
+
+```bash
+# Anthropic — faster / cheaper
+node generate.js --spec my-spec.md --provider anthropic --model claude-haiku-latest
+
+# Anthropic — most capable
+node generate.js --spec my-spec.md --provider anthropic --model claude-opus-latest
+
+# OpenAI — smaller / cheaper
+node generate.js --spec my-spec.md --provider openai --model gpt-4o-mini
+
+# OpenAI — most capable
+node generate.js --spec my-spec.md --provider openai --model o3
+
+# Groq — fast inference
+node generate.js --spec my-spec.md --provider groq --model llama-3.3-70b-versatile
+
+# Mistral — European data residency
+node generate.js --spec my-spec.md --provider mistral --model mistral-large-latest
+
+# Ollama — fully local, no API key
+node generate.js --spec my-spec.md --provider ollama --model llama3.1:70b
+```
+
+### Model quality vs cost trade-offs
+
+| Use case | Recommended model |
+|----------|------------------|
+| Quick draft / testing | `claude-haiku-latest` or `gpt-4o-mini` |
+| Standard presentations (default) | `claude-sonnet-latest` or `gpt-4o` |
+| Complex, multi-slide with rich animations | `claude-opus-latest` or `o3` |
+| No internet / fully private | Ollama `llama3.1:70b` |
+| Corporate proxy (allowlisted aliases only) | `claude-sonnet-latest` |
+
+### Permanently changing the default model
+
+Edit `generate.js`, find the `DEFAULT_MODELS` object, and update the entry for your provider:
+
+```js
+const DEFAULT_MODELS = {
+  anthropic: 'claude-sonnet-latest',  // ← change this
+  openai:    'gpt-4o',
+  ollama:    'llama3.1:70b',
+  groq:      'llama-3.3-70b-versatile',
+  mistral:   'mistral-large-latest',
+}
+```
 
 ---
 
