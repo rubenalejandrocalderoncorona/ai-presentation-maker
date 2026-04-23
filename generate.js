@@ -69,7 +69,7 @@ function parseArgs() {
 
 // ── Default models per provider ─────────────────────────────────────────────
 const DEFAULT_MODELS = {
-  anthropic: 'claude-opus-4-7',
+  anthropic: 'claude-sonnet-latest',
   openai:    'gpt-4o',
   ollama:    'llama3.1:70b',
   groq:      'llama-3.3-70b-versatile',

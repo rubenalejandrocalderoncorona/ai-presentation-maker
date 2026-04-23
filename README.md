@@ -58,6 +58,8 @@ export MISTRAL_API_KEY=...
 ```
 
 > **Proxy / Claude Code users:** if `ANTHROPIC_BASE_URL` is already set in your environment (e.g. you're running inside a Claude Code session), the tool picks it up automatically — no extra flags needed. You can also set it in `.env`.
+>
+> Corporate proxies often restrict which models are allowed. If you get an `INVALID_MODEL` error, use `--model claude-sonnet-latest` or check your proxy's supported model list.
 
 ### 3. Write your spec
 
@@ -103,7 +105,7 @@ npm run dev
 
 | Provider | Default model |
 |----------|--------------|
-| `anthropic` | `claude-opus-4-7` |
+| `anthropic` | `claude-sonnet-latest` |
 | `openai` | `gpt-4o` |
 | `ollama` | `llama3.1:70b` |
 | `groq` | `llama-3.3-70b-versatile` |
