@@ -30,6 +30,7 @@ function parseArgs() {
     output: './output/presentation',
     dryRun: false,
     apiKey: null,
+    baseUrl: null,
   }
   for (let i = 0; i < args.length; i++) {
     switch (args[i]) {
@@ -39,6 +40,7 @@ function parseArgs() {
       case '--output':      opts.output   = args[++i]; break
       case '--dry-run':     opts.dryRun   = true;      break
       case '--api-key':     opts.apiKey   = args[++i]; break
+      case '--base-url':    opts.baseUrl  = args[++i]; break
     }
   }
   if (!opts.spec) {
@@ -75,9 +77,15 @@ function buildPrompt(specPath) {
 
 // ── Provider implementations ─────────────────────────────────────────────────
 
-async function callAnthropic(model, prompt, apiKey) {
+async function callAnthropic(model, prompt, apiKey, baseUrl) {
   const key = apiKey || process.env.ANTHROPIC_API_KEY
   if (!key) throw new Error('Set ANTHROPIC_API_KEY env var or pass --api-key')
+
+  // Honour proxy: ANTHROPIC_BASE_URL env var, --base-url flag, or the official endpoint.
+  // Trailing slash is normalised so the path segment appends cleanly.
+  const base = (baseUrl || process.env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com')
+    .replace(/\/$/, '')
+  const endpoint = `${base}/v1/messages`
 
   const body = JSON.stringify({
     model,
@@ -86,7 +94,7 @@ async function callAnthropic(model, prompt, apiKey) {
     messages: [{ role: 'user', content: prompt.user }],
   })
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
+  const res = await fetch(endpoint, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -232,11 +240,15 @@ async function main() {
   const opts = parseArgs()
   const model = opts.model || DEFAULT_MODELS[opts.provider]
 
+  const effectiveBaseUrl = opts.baseUrl || process.env.ANTHROPIC_BASE_URL || null
+
   console.log(`\n🎨 AI Presentation Maker`)
   console.log(`   Provider : ${opts.provider}`)
   console.log(`   Model    : ${model}`)
   console.log(`   Spec     : ${opts.spec}`)
-  console.log(`   Output   : ${opts.output}\n`)
+  console.log(`   Output   : ${opts.output}`)
+  if (effectiveBaseUrl) console.log(`   Base URL : ${effectiveBaseUrl}`)
+  console.log()
 
   const prompt = buildPrompt(opts.spec)
 
@@ -254,7 +266,7 @@ async function main() {
 
   try {
     switch (opts.provider) {
-      case 'anthropic': response = await callAnthropic(model, prompt, opts.apiKey); break
+      case 'anthropic': response = await callAnthropic(model, prompt, opts.apiKey, effectiveBaseUrl); break
       case 'openai':    response = await callOpenAI(model, prompt, opts.apiKey);    break
       case 'ollama':    response = await callOllama(model, prompt);                 break
       case 'groq':      response = await callGroq(model, prompt, opts.apiKey);      break

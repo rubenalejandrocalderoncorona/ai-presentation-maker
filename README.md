@@ -85,6 +85,7 @@ npm run dev
 | `--model <id>` | *(see table)* | Override the model (e.g. `--model gpt-4o-mini`) |
 | `--output <dir>` | `./output/presentation` | Where to write the generated project |
 | `--api-key <key>` | env var | Override API key (or set env var) |
+| `--base-url <url>` | `ANTHROPIC_BASE_URL` | Anthropic API proxy base URL (see [Using with an API Proxy](#using-with-an-api-proxy)) |
 | `--dry-run` | `false` | Print the first 500 chars of each prompt without calling the API |
 
 ### Default models per provider
@@ -179,6 +180,56 @@ node generate.js --spec my-spec.md --provider ollama --model llama3.1:70b --outp
 ```
 
 > Smaller models (7B-13B) may produce incomplete output. Use 70B+ for best results.
+
+---
+
+## Using with an API Proxy
+
+If you access the Anthropic API through a proxy (e.g. a corporate gateway, a cost-tracking service, or a local Claude Code proxy like the one used in enterprise environments), point the tool at it with `ANTHROPIC_BASE_URL` or `--base-url`.
+
+### Via environment variable (recommended)
+
+```bash
+export ANTHROPIC_BASE_URL=http://localhost:6655/anthropic
+export ANTHROPIC_API_KEY=any-non-empty-string   # proxy may not check this
+
+node generate.js --spec my-spec.md --provider anthropic --output ./MyPresentation
+```
+
+The tool will print `Base URL : http://localhost:6655/anthropic` on startup so you can confirm it's active.
+
+### Via CLI flag
+
+```bash
+node generate.js \
+  --spec my-spec.md \
+  --provider anthropic \
+  --base-url http://localhost:6655/anthropic \
+  --output ./MyPresentation
+```
+
+### How it works
+
+The tool appends `/v1/messages` to whatever base URL you supply, then sends a standard Anthropic API request body. The proxy is expected to forward the request (with or without modifying headers/keys) and return an unmodified Anthropic response envelope.
+
+```
+your machine
+  └─ generate.js
+       └─ POST http://localhost:6655/anthropic/v1/messages
+            └─ proxy forwards → https://api.anthropic.com/v1/messages
+```
+
+### Claude Code proxy (same session proxy)
+
+If you're running inside a Claude Code session, the proxy is already configured:
+
+```bash
+echo $ANTHROPIC_BASE_URL   # e.g. http://localhost:6655/anthropic/
+```
+
+Just run the tool as-is — it inherits the environment variable automatically. No `--base-url` flag needed.
+
+> **Note:** `--base-url` only applies to the `anthropic` provider. For `openai`, `groq`, and `mistral`, use their respective `OPENAI_BASE_URL` / `GROQ_BASE_URL` environment variables if your proxy exposes an OpenAI-compatible endpoint.
 
 ---
 
