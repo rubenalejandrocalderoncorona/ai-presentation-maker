@@ -32,6 +32,15 @@ cd ai-presentation-maker
 
 ### 2. Set your API key
 
+The tool loads a `.env` file in the project root automatically — no third-party library required.
+
+```bash
+cp .env.example .env
+# then edit .env and fill in your key(s)
+```
+
+Or export directly in your shell:
+
 ```bash
 # Anthropic (default)
 export ANTHROPIC_API_KEY=sk-ant-...
@@ -47,6 +56,8 @@ export MISTRAL_API_KEY=...
 
 # Ollama — no key needed, just have Ollama running locally
 ```
+
+> **Proxy / Claude Code users:** if `ANTHROPIC_BASE_URL` is already set in your environment (e.g. you're running inside a Claude Code session), the tool picks it up automatically — no extra flags needed. You can also set it in `.env`.
 
 ### 3. Write your spec
 

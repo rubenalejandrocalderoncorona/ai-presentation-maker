@@ -20,6 +20,22 @@ import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
+// ── Load .env file if present ───────────────────────────────────────────────
+// Supports KEY=value and KEY="value" lines; ignores comments and blanks.
+const envPath = path.join(__dirname, '.env')
+if (fs.existsSync(envPath)) {
+  const lines = fs.readFileSync(envPath, 'utf8').split('\n')
+  for (const line of lines) {
+    const trimmed = line.trim()
+    if (!trimmed || trimmed.startsWith('#')) continue
+    const eq = trimmed.indexOf('=')
+    if (eq === -1) continue
+    const key = trimmed.slice(0, eq).trim()
+    const val = trimmed.slice(eq + 1).trim().replace(/^["']|["']$/g, '')
+    if (!(key in process.env)) process.env[key] = val  // env var takes precedence
+  }
+}
+
 // ── CLI argument parsing ────────────────────────────────────────────────────
 function parseArgs() {
   const args = process.argv.slice(2)
